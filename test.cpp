@@ -16,21 +16,13 @@ using namespace std;
 */
 
 struct Node {
-    int x,y; //coordinates of the node
+    Position position; //coordinates of the node
     int cost;
     int heuristic;
     Node* parent;
     //f(x) = g(x)+h(x)
     int totalCost() const{
         return cost+heuristic;
-    }
-};
-
-//Compare several Nodes by total cost and decide
-//which Node should be in closed Node
-struct CompareNode{
-    bool operator()(const Node* a,const Node* b){
-        return a->totalCost() > b-> totalCost();
     }
 };
 
@@ -41,6 +33,10 @@ int heuristic(const Position& a, const Position& b) {
 
 //A*search algorithm
 Position a_star(const Position& start, const Position& goal, const Board& board){
+    auto compare = [](const Node& a, const Node& b) { return a.totalCost() > b.totalCost(); }; //compare f(x) of a and b and store as variable
+    priority_queue<Node*, vector<Node*>, decltype(compare)> openSet(compare); //always make top the Node that has highest totalcost
+
+
     //return Position coordinates
 }
 
@@ -60,11 +56,7 @@ int direction(const Position& result, const Position& start){
 }
 
 int choose_next_move(const Board& board) {
-    std::
-    //Position target = (a_star)
-    Position target = board.apple;
-    Position start = board.get_head();
-
-    return direction(target, start);
+    //return direction(a_star(board.get_head(), board.apple, board), board.get_head());
+    return direction(board.apple, board.get_head());
 }
 

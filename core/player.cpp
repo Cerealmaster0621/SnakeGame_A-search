@@ -16,7 +16,7 @@ using namespace std;
 */
 
 struct Node {
-    int x,y; //coordinates of the node
+    Position position; //coordinates of the node
     int cost;
     int heuristic;
     Node* parent;
@@ -26,21 +26,17 @@ struct Node {
     }
 };
 
-//Compare several Nodes by total cost and decide
-//which Node should be in closed Node
-struct CompareNode{
-    bool operator()(const Node* a,const Node* b){
-        return a->totalCost() > b-> totalCost();
-    }
-};
-
 //heuristic(Manhattan)
 int heuristic(const Position& a, const Position& b) {
     return distance(a,b);
 }
 
 //A*search algorithm
-Position a_star(const Position& start, const Position& goal, const vector<vector<int>>& grid){
+Position a_star(const Position& start, const Position& goal, const Board& board){
+    auto compare = [](const Node& a, const Node& b) { return a.totalCost() > b.totalCost(); }; //compare f(x) of a and b and store as variable
+    priority_queue<Node*, vector<Node*>, decltype(compare)> openSet(compare); //always make top the Node that has highest totalcost
+
+
     //return Position coordinates
 }
 
@@ -52,16 +48,15 @@ int direction(const Position& result, const Position& start){
     } else if (result.column < start.column) {
         return 2; //when targetted column is smaller than current column -> move left
     } else if (result.row > start.row) {
-        return 3; //when targetted row is bigger than current row -> move up
+        return 3; //when targetted row is bigger than current row -> move down
     } else if (result.row < start.row) {
-        return 1; //when targetted row is smaller than current row -> move down
+        return 1; //when targetted row is smaller than current row -> move up
     }
     return -1;
 }
 
 int choose_next_move(const Board& board) {
-    Position target = board.apple;
-    Position start = board.get_head();
-    return direction(target, start);
+    //return direction(a_star(board.get_head(), board.apple, board), board.get_head());
+    return direction(board.apple, board.get_head());
 }
 
