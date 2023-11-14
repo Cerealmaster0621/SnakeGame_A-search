@@ -40,7 +40,7 @@ int heuristic(const Position& a, const Position& b) {
 }
 
 //A*search algorithm
-Position a_star(const Position& start, const Position& goal, const Board& board){
+Position a_star(const Position& start, const Position& goal, const vector<vector<int>>& grid){
     //return Position coordinates
 }
 
@@ -52,19 +52,16 @@ int direction(const Position& result, const Position& start){
     } else if (result.column < start.column) {
         return 2; //when targetted column is smaller than current column -> move left
     } else if (result.row > start.row) {
-        return 3; //when targetted row is bigger than current row -> move down
+        return 3; //when targetted row is bigger than current row -> move up
     } else if (result.row < start.row) {
-        return 1; //when targetted row is smaller than current row -> move up
+        return 1; //when targetted row is smaller than current row -> move down
     }
     return -1;
 }
 
 int choose_next_move(const Board& board) {
-    std::
-    //Position target = (a_star)
     Position target = board.apple;
     Position start = board.get_head();
-
     return direction(target, start);
 }
 
