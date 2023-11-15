@@ -77,7 +77,7 @@ Position a_star(const Position& start, const Position& goal, const Board& board)
 
             // Trace back to find the next position after the start
             int loopCount = 0;
-            while (current.parent != nullptr) {
+            while (current.parent != nullptr && current.parent->Position != start) {
                 current = *current.parent;
             }
             return current.Position;

@@ -45,8 +45,17 @@ int heuristic(const Position& a, const Position& b) {
     return distance(a,b);
 }
 
-//A*search algorithm
-Position a_star(const Position& start, const Position& goal, const Board& board){
+vector<Position> getNeighbors(const Position& a,const Board& board){ //get neighbored Node and store it in result
+    vector<Position> result = {};
+    if (board.is_valid_position({a.row,a.column+1})) result.push_back({a.row,a.column+1});//0
+    if (board.is_valid_position({a.row-1,a.column})) result.push_back({a.row-1,a.column});//1
+    if (board.is_valid_position({a.row,a.column-1})) result.push_back({a.row,a.column-1});//2
+    if (board.is_valid_position({a.row+1,a.column})) result.push_back({a.row+1,a.column});//3
+    return result;
+}
+
+//return full paths to goal(0 is current position, last is goal)
+vector<Position> a_star(const Position& start, const Position& goal, const Board& board){
     auto compare = [](const Node& a, const Node& b) { return a.totalCost() > b.totalCost(); }; //compare two nodes
     std::priority_queue<Node, std::vector<Node>, decltype(compare)> openSet(compare); // this sets contains Nodes that needs to be treated, lowest cost comes on top
     std::unordered_map<Position, Node> allNodes; //contains every Nodes that has or needs to be searched
@@ -58,16 +67,39 @@ Position a_star(const Position& start, const Position& goal, const Board& board)
         Node current = openSet.top();//current Node = top of the openset queue that has lowest totalcost
         openSet.pop(); // delete the current node from openset since we don't need to iterate again
 
-        if (current.Position == goal){
-            
+        if (current.Position == goal){ //when path search finished, go back to the parents Node(nullptr) and save every
+        //Nodes in path vector. return REVERSED order of path since path[0] should be current position and last index to goal.
+            vector<Position> path = {};
+            while(!(current.parent == nullptr)){
+                path.push_back(current.Position);
+                current = *current.parent;
+            }
+            reverse(path.begin(),path.end());
+            return path;
+        }
+
+        for(const auto& neighbor : getNeighbors(current.Position, board)){
+            if(!board.is_valid_position(neighbor)) continue; //if the given neighbor is not valid, continue
+            bool isNewNode = allNodes.find(neighbor) == allNodes.end();//check if it's not already in allNodes map
+            bool isCloserToGoal = (current.cost+1) < allNodes[neighbor].cost;//check new route is closer to goal
+            if(isNewNode || isCloserToGoal){ //if New Node is not in allNodes or have better costs
+                allNodes[neighbor] = {neighbor, current.cost +1, heuristic(neighbor, goal), &current};//apppend new Nodes
+                openSet.push(allNodes[neighbor]); //append new openSet
+            }
         }
     }
-    //return Position coordinates
+    return {}; //return empty path if no possible path found
 }
 
-//decides which direction should snake move based on the 
-//coordinates of a_star function has returned.
-int direction(const Position& result, const Position& start){
+//NEEDS MODIFICATION
+int direction(const Board& board, const Position& start){
+    vector<Position> path = a_star(board.get_head(), board.apple, board);
+    if (path.size() < 2) {
+        // Handle the case where path does not have at least two positions
+        // This could be an error or a special case
+        return -1;
+    }
+    Position result = path[1];
     if (result.column > start.column) {
         return 0; //when targetted column is bigger than current column -> move right
     } else if (result.column < start.column) {
@@ -82,6 +114,7 @@ int direction(const Position& result, const Position& start){
 
 int choose_next_move(const Board& board) {
     //return direction(a_star(board.get_head(), board.apple, board), board.get_head());
-    return direction(board.apple, board.get_head());
+    // return direction(board.apple, board.get_head());
+    return direction(board, board.get_head());
 }
 
