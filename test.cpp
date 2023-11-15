@@ -1,4 +1,5 @@
 //https://github.com/Cerealmaster0621/SnakeGame_A-search
+//15/11/2023 snake doesn't recognize it's own body yet. needs modification for that.    
 
 #include "player.h"
 #include <iostream>
@@ -30,7 +31,7 @@ namespace std { // hash function for custom Node unordered map
 }
 
 struct Node {
-    Position Position; //coordinates of the node
+    Position Position;
     int cost;
     int heuristic;
     Node* parent;
@@ -54,7 +55,7 @@ vector<Position> getNeighbors(const Position& a,const Board& board){ //get neigh
     return result;
 }
 
-//return full paths to goal(0 is current position, last is goal)
+//return full paths to goal(0 is next position, last is goal)
 vector<Position> a_star(const Position& start, const Position& goal, const Board& board){
     auto compare = [](const Node& a, const Node& b) { return a.totalCost() > b.totalCost(); }; //compare two nodes
     std::priority_queue<Node, std::vector<Node>, decltype(compare)> openSet(compare); // this sets contains Nodes that needs to be treated, lowest cost comes on top
@@ -72,7 +73,7 @@ vector<Position> a_star(const Position& start, const Position& goal, const Board
             vector<Position> path = {};
             while(!(current.parent == nullptr)){
                 path.push_back(current.Position);
-                current = *current.parent;
+                current = *current.parent; 
             }
             reverse(path.begin(),path.end());
             return path;
@@ -80,26 +81,24 @@ vector<Position> a_star(const Position& start, const Position& goal, const Board
 
         for(const auto& neighbor : getNeighbors(current.Position, board)){
             if(!board.is_valid_position(neighbor)) continue; //if the given neighbor is not valid, continue
+            //!!!make node before adding in the unordered_map or priority queue. cause infinite loop for same adrees on Parent Node!!!
+            Node neighborNode = {neighbor, current.cost + 1, heuristic(neighbor,goal),&allNodes[current.Position]};
             bool isNewNode = allNodes.find(neighbor) == allNodes.end();//check if it's not already in allNodes map
-            bool isCloserToGoal = (current.cost+1) < allNodes[neighbor].cost;//check new route is closer to goal
-            if(isNewNode || isCloserToGoal){ //if New Node is not in allNodes or have better costs
-                allNodes[neighbor] = {neighbor, current.cost +1, heuristic(neighbor, goal), &current};//apppend new Nodes
-                openSet.push(allNodes[neighbor]); //append new openSet
+            bool isCloserToGoal = isNewNode || (current.cost+1) < allNodes[neighbor].cost;//check new route is closer to goal
+            if(isCloserToGoal){ //if New Node is not in allNodes or have better costs
+                allNodes[neighbor] = neighborNode;//apppend new Nodes
+                openSet.push(neighborNode); //append new openSet
             }
         }
     }
     return {}; //return empty path if no possible path found
 }
 
-//NEEDS MODIFICATION
+//based on vector<Position> from a_star, decide next move
 int direction(const Board& board, const Position& start){
     vector<Position> path = a_star(board.get_head(), board.apple, board);
-    if (path.size() < 2) {
-        // Handle the case where path does not have at least two positions
-        // This could be an error or a special case
-        return -1;
-    }
-    Position result = path[1];
+    Position result = path[0];
+    cout<<"next row : "<<result.row<<", next column : "<<result.column<<endl;
     if (result.column > start.column) {
         return 0; //when targetted column is bigger than current column -> move right
     } else if (result.column < start.column) {
@@ -113,8 +112,5 @@ int direction(const Board& board, const Position& start){
 }
 
 int choose_next_move(const Board& board) {
-    //return direction(a_star(board.get_head(), board.apple, board), board.get_head());
-    // return direction(board.apple, board.get_head());
     return direction(board, board.get_head());
 }
-
