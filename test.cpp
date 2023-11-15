@@ -1,5 +1,4 @@
 //https://github.com/Cerealmaster0621/SnakeGame_A-search
-//15/11/2023 snake doesn't recognize it's own body yet. needs modification for that.    
 
 #include "player.h"
 #include <iostream>
@@ -46,12 +45,21 @@ int heuristic(const Position& a, const Position& b) {
     return distance(a,b);
 }
 
+
+
 vector<Position> get_neighbors(const Position& a,const Board& board){ //get neighbored Node and store it in result
     vector<Position> result = {};
+    deque<Position> snake_body = board.snake;
     if (board.is_valid_position({a.row,a.column+1})) result.push_back({a.row,a.column+1});//0
     if (board.is_valid_position({a.row-1,a.column})) result.push_back({a.row-1,a.column});//1
     if (board.is_valid_position({a.row,a.column-1})) result.push_back({a.row,a.column-1});//2
     if (board.is_valid_position({a.row+1,a.column})) result.push_back({a.row+1,a.column});//3
+    for (const auto& body_part : snake_body) { //check if body part is on neighbor
+        auto it = find(result.begin(), result.end(), body_part);
+        if (it != result.end()) {
+            result.erase(it); // Remove from result if there is snake body part found
+        }
+    }
     return result;
 }
 
@@ -91,7 +99,7 @@ vector<Position> a_star(const Position& start, const Position& goal, const Board
             }
         }
     }
-    return {}; //return empty path if no possible path found
+    return {{-1,-1}}; //return empty path if no possible path found
 }
 
 //based on vector<Position> from a_star, decide next move
