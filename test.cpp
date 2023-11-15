@@ -1,7 +1,12 @@
+//https://github.com/Cerealmaster0621/SnakeGame_A-search
+
 #include "player.h"
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <unordered_map>
+#include <functional>
+#include <algorithm>
 #include <cmath>
 
 using namespace std;
@@ -15,8 +20,17 @@ using namespace std;
     * 
 */
 
+namespace std { // hash function for custom Node unordered map
+    template <>
+    struct hash<Position> {
+        size_t operator()(const Position& Position) const {
+            return hash<int>()(Position.row) ^ hash<int>()(Position.column);
+        }
+    };
+}
+
 struct Node {
-    Position position; //coordinates of the node
+    Position Position; //coordinates of the node
     int cost;
     int heuristic;
     Node* parent;
@@ -33,10 +47,21 @@ int heuristic(const Position& a, const Position& b) {
 
 //A*search algorithm
 Position a_star(const Position& start, const Position& goal, const Board& board){
-    auto compare = [](const Node& a, const Node& b) { return a.totalCost() > b.totalCost(); }; //compare f(x) of a and b and store as variable
-    priority_queue<Node*, vector<Node*>, decltype(compare)> openSet(compare); //always make top the Node that has highest totalcost
+    auto compare = [](const Node& a, const Node& b) { return a.totalCost() > b.totalCost(); }; //compare two nodes
+    std::priority_queue<Node, std::vector<Node>, decltype(compare)> openSet(compare); // this sets contains Nodes that needs to be treated, lowest cost comes on top
+    std::unordered_map<Position, Node> allNodes; //contains every Nodes that has or needs to be searched
 
+    openSet.push({start, 0, heuristic(start, goal),nullptr});//openset initial value(can't be empty unless search has done)  
+    allNodes[start] = {start, 0, heuristic(start, goal),nullptr};//allNodes initial value
 
+    while (!openSet.empty()){
+        Node current = openSet.top();//current Node = top of the openset queue that has lowest totalcost
+        openSet.pop(); // delete the current node from openset since we don't need to iterate again
+
+        if (current.Position == goal){
+            
+        }
+    }
     //return Position coordinates
 }
 
