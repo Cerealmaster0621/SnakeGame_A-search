@@ -1,5 +1,3 @@
-//https://github.com/Cerealmaster0621/SnakeGame_A-search
-//15/11/2023 snake doesn't recognize it's own body yet. needs modification for that.    
 
 #include "player.h"
 #include <iostream>
@@ -9,29 +7,37 @@
 #include <functional>
 #include <algorithm>
 #include <cmath>
+#include <iterator>
+#include <random>
 
 using namespace std;
-
-/*
-    * Position = {row, column};
-    * const int MOVE_RIGHT = 0;
-    * const int MOVE_UP = 1;
-    * const int MOVE_LEFT = 2;
-    * const int MOVE_DOWN = 3;
-    * 
-*/
 
 namespace std { // hash function for custom Node unordered map
     template <>
     struct hash<Position> {
-        size_t operator()(const Position& Position) const {
-            return hash<int>()(Position.row) ^ hash<int>()(Position.column);
+        size_t operator()(const Position& position) const {
+            return hash<int>()(position.row) ^ hash<int>()(position.column);
         }
     };
 }
 
+//random Iterator for generating random functions
+template<typename Iter, typename RandomGenerator> 
+Iter select_randomly(Iter start, Iter end, RandomGenerator& g) {
+    uniform_int_distribution<> dis(0, distance(start, end) - 1);
+    advance(start, dis(g));
+    return start;
+}
+
+template<typename Iter>
+Iter select_randomly(Iter start, Iter end) {
+    static random_device rd;
+    static mt19937 gen(rd());
+    return select_randomly(start, end, gen);
+}
+
 struct Node {
-    Position Position;
+    Position position;
     int cost;
     int heuristic;
     Node* parent;
@@ -46,8 +52,6 @@ int heuristic(const Position& a, const Position& b) {
     return distance(a,b);
 }
 
-
-
 vector<Position> get_neighbors(const Position& a,const Board& board){ //get neighbored Node and store it in result
     vector<Position> result = {};
     deque<Position> snake_body = board.snake;
@@ -55,7 +59,7 @@ vector<Position> get_neighbors(const Position& a,const Board& board){ //get neig
     if (board.is_valid_position({a.row-1,a.column})) result.push_back({a.row-1,a.column});//1
     if (board.is_valid_position({a.row,a.column-1})) result.push_back({a.row,a.column-1});//2
     if (board.is_valid_position({a.row+1,a.column})) result.push_back({a.row+1,a.column});//3
-    for (const auto& body_part : snake_body) {
+    for (const auto& body_part : snake_body) { //check if body part is on neighbor
         auto it = find(result.begin(), result.end(), body_part);
         if (it != result.end()) {
             result.erase(it); // Remove from result if there is snake body part found
@@ -77,21 +81,21 @@ vector<Position> a_star(const Position& start, const Position& goal, const Board
         Node current = open_set.top();//current Node = top of the open_set queue that has lowest total_cost
         open_set.pop(); // delete the current node from open_set since we don't need to iterate again
 
-        if (current.Position == goal){ //when path search finished, go back to the parents Node(nullptr) and save every
+        if (current.position == goal){ //when path search finished, go back to the parents Node(nullptr) and save every
         //Nodes in path vector. return REVERSED order of path since path[0] should be current position and last index to goal.
             vector<Position> path = {};
             while(!(current.parent == nullptr)){
-                path.push_back(current.Position);
+                path.push_back(current.position);
                 current = *current.parent; 
             }
             reverse(path.begin(),path.end());
             return path;
         }
 
-        for(const auto& neighbor : get_neighbors(current.Position, board)){
+        for(const auto& neighbor : get_neighbors(current.position, board)){
             if(!board.is_valid_position(neighbor)) continue; //if the given neighbor is not valid, continue
             //!!!make node before adding in the unordered_map or priority queue. cause infinite loop for same adrees on Parent Node!!!
-            Node neighbor_node = {neighbor, current.cost + 1, heuristic(neighbor,goal),&all_nodes[current.Position]};
+            Node neighbor_node = {neighbor, current.cost + 1, heuristic(neighbor,goal),&all_nodes[current.position]};
             bool is_new_node = all_nodes.find(neighbor) == all_nodes.end();//check if it's not already in all_nodes map
             bool is_closer_to_goal = is_new_node || (current.cost+1) < all_nodes[neighbor].cost;//check new route is closer to goal
             if(is_closer_to_goal){ //if New Node is not in all_nodes or have better costs
@@ -104,22 +108,35 @@ vector<Position> a_star(const Position& start, const Position& goal, const Board
 }
 
 //based on vector<Position> from a_star, decide next move
-int direction(const Board& board, const Position& start){
-    vector<Position> path = a_star(board.get_head(), board.apple, board);
-    Position result = path[0];
-    cout<<"next row : "<<result.row<<", next column : "<<result.column<<endl;
-    if (result.column > start.column) {
+int direction(const Board& board, const Position& next_position){
+    cout<<"Score : "<<board.snake.size()-1<<", next row : "<<next_position.row<<", next column : "<<next_position.column<<endl;
+    if (next_position.column > board.get_head().column) {
         return 0; //when targetted column is bigger than current column -> move right
-    } else if (result.column < start.column) {
+    } else if (next_position.column < board.get_head().column) {
         return 2; //when targetted column is smaller than current column -> move left
-    } else if (result.row > start.row) {
+    } else if (next_position.row > board.get_head().row) {
         return 3; //when targetted row is bigger than current row -> move down
-    } else if (result.row < start.row) {
+    } else if (next_position.row < board.get_head().row) {
         return 1; //when targetted row is smaller than current row -> move up
     }
     return -1;
 }
 
 int choose_next_move(const Board& board) {
-    return direction(board, board.get_head());
+    // a_search first
+    vector<Position> search_result = a_star(board.get_head(), board.apple, board);
+    if (search_result[0] != Position{-1, -1}) return direction(board, search_result[0]);
+    // If that fails, try moving towards the tail
+    else{
+        Position tail = board.snake[board.snake.size() - 1];
+        search_result = a_star(board.get_head(), tail, board);
+        if (search_result[0] != Position{-1, -1}) return direction(board, search_result[0]);
+    }
+    // If all else fails, choose a random move
+    vector<Position> possible_paths = get_neighbors(board.get_head(), board);
+    if (!possible_paths.empty()) {
+        Position result = *select_randomly(possible_paths.begin(), possible_paths.end());
+        return direction(board, result);
+    }
+    return 1;
 }
