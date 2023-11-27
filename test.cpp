@@ -9,6 +9,7 @@
 #include <cmath>
 #include <iterator>
 #include <random>
+#include <map>
 
 using namespace std;
 
@@ -20,6 +21,16 @@ namespace std { // hash function for custom Node unordered map
         }
     };
 }
+
+struct PositionComparator {
+    bool operator()(const Position& a, const Position& b) const {
+        if (a.row == b.row) {
+            return a.column < b.column;
+        }
+        return a.row < b.row;
+    }
+};
+
 
 //random Iterator for generating random functions
 template<typename Iter, typename RandomGenerator> 
@@ -122,23 +133,70 @@ int direction(const Board& board, const Position& next_position){
     return -1;
 }
 
-int choose_next_move(const Board& board) {
-    // a_search first
-    vector<Position> search_result = a_star(board.get_head(), board.apple, board);
-    if (search_result[0] != Position{-1, -1}) return direction(board, search_result[0]);
-    // If that fails, try moving towards the tail
-    else{
-        cout<<"following tails... "<<endl;
-        Position tail = board.snake[board.snake.size() - 1];
-        search_result = a_star(board.get_head(), tail, board);
-        if (search_result[0] != Position{-1, -1}) return direction(board, search_result[0]);
-    }
-    // If all else fails, choose a random move
+// Simple wandering strategy
+Position wandering_strategy(const Board& board) {
     vector<Position> possible_paths = get_neighbors(board.get_head(), board);
+    // Filter out positions leading to immediate collision
+    possible_paths.erase(remove_if(possible_paths.begin(), possible_paths.end(),
+                                [&](const Position& pos) {
+                                    return !board.is_valid_position(pos);
+                                }),
+                        possible_paths.end());
+
     if (!possible_paths.empty()) {
-        cout<<"choosing random moves..."<<endl;
-        Position result = *select_randomly(possible_paths.begin(), possible_paths.end());
-        return direction(board, result);
+        // Select a random safe position to move to
+        return *select_randomly(possible_paths.begin(), possible_paths.end());
+    }
+
+    // If no safe move is available, return an invalid position
+    return {-1, -1};
+}
+
+vector<Position> bfs(const Position& start, const Position& goal, const Board& board) {
+    queue<Position> q;
+    map<Position, Position> parent;
+    vector<Position> path;
+
+    q.push(start);
+    parent[start] = { -1, -1 }; // Mark the start position with a special value
+
+    while (!q.empty()) {
+        Position current = q.front();
+        q.pop();
+
+        if (current == goal) {
+            // Construct the path
+            while (!(current == start)) {
+                path.push_back(current);
+                current = parent[current];
+            }
+            reverse(path.begin(), path.end());
+            return path;
+        }
+
+        for (const auto& neighbor : get_neighbors(current, board)) {
+            if (parent.find(neighbor) == parent.end()) { // if not visited
+                q.push(neighbor);
+                parent[neighbor] = current;
+            }
+        }
+    }
+
+    return {{-1, -1}}; // return empty path if no path is found
+}
+
+// Modified choose_next_move
+int choose_next_move(const Board& board) {
+    vector<Position> search_result = a_star(board.get_head(), board.apple, board);
+    if (search_result[0] != Position{-1, -1}) {
+        return direction(board, search_result[0]);
+    }
+
+    // If A* fails, use BFS
+    search_result = bfs(board.get_head(), board.apple, board);
+    if (search_result[0] != Position{-1, -1}) {
+        return direction(board, search_result[0]);
     }
     return 1;
+    // ... rest of the code for other strategies
 }

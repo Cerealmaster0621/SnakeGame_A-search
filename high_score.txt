@@ -1,3 +1,7 @@
+51
+2023-11-28 01:02:44.515272
+youngjunkang
+
 #include<bits/stdc++.h>
 #include "player.h"
 
@@ -30,7 +34,7 @@ vector<Position> get_neighbors(const Position& a,const Board& board){ //get neig
 
 //BFS search
 /* q
-*  visited_paths <-> instead of Node struct, make previous list for recording it's connection this time
+*  visited_paths
 *  results_paths
 */
 vector<Position> bfs(const Position& start, const Position& goal, const Board& board){
@@ -76,33 +80,35 @@ vector<Position> bfs(const Position& start, const Position& goal, const Board& b
 
 vector<Position> survival_mode(const Position& start, const Board& board) {
     queue<Position> q;
-    map<Position, int, Position_override> distance;//records distance between start-current possition
+    map<Position, int, Position_override> distance;  // Tracks the distance from the start
     map<Position, Position, Position_override> previous;
 
     q.push(start);
     distance[start] = 0;
-    Position farthest_position = start;//records furthest position from start <=> keep updating end in bfs
-    //looping phase
+
+    Position farthest_position = start;  // Keep track of the farthest position reached
+
     while (!q.empty()) {
         Position current = q.front();
         q.pop();
+
         vector<Position> neighbors = get_neighbors(current, board);
-        //looping phase (records distance)
         for (auto& neighbor : neighbors) {
-            if (distance.find(neighbor) == distance.end()) {
+            if (distance.find(neighbor) == distance.end()) {  // Not visited
                 q.push(neighbor);
                 distance[neighbor] = distance[current] + 1;
                 previous[neighbor] = current;
+
                 if (distance[neighbor] > distance[farthest_position]) {
-                    farthest_position = neighbor;
+                    farthest_position = neighbor;  // Update the farthest position
                 }
             }
         }
     }
-    //pathfinding phase
+
+    // Reconstruct the path to the farthest position
     vector<Position> path;
-    bool flag = 1;
-    while(flag) {
+    if (farthest_position != start) {
         Position parent_node = farthest_position;
         while (parent_node != start) {
             path.push_back(parent_node);
@@ -112,7 +118,7 @@ vector<Position> survival_mode(const Position& start, const Board& board) {
         reverse(path.begin(), path.end());
         return path;
     }
-    return {{-1,-1}};
+    return {{-1,-1}};  // This path is the longest one found within the snake's body
 }
 
 

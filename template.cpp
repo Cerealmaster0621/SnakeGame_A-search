@@ -128,6 +128,7 @@ int choose_next_move(const Board& board) {
     if (search_result[0] != Position{-1, -1}) return direction(board, search_result[0]);
     // If that fails, try moving towards the tail
     else{
+        cout<<"Following tail"<<endl;
         Position tail = board.snake[board.snake.size() - 1];
         search_result = a_star(board.get_head(), tail, board);
         if (search_result[0] != Position{-1, -1}) return direction(board, search_result[0]);
