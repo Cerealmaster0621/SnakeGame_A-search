@@ -1,11 +1,11 @@
 # A* Searching for Snake Game
 
-This project implements the A* pathfinding algorithm in a classic snake game. The algorithm calculates the shortest path to the target (apple) while avoiding obstacles, including its own body.
+This project implements the A* pathfinding and BFS algorithm in a classic snake game. The algorithm calculates the shortest path to the target (apple) while avoiding obstacles, including its own body. when there is no possible paths to target is returned, snake takes a 'survival mode' as an algorithm, which basically tries to wander around inside safe boundaries. 
 
 ## Features
 
 - **[A * Searching Algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm)**
-
+- **[BFS Algorithm](https://en.wikipedia.org/wiki/Breadth-first_search)**
 ## Getting Started
 
 ### Prerequisites
