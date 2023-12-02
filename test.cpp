@@ -9,7 +9,6 @@
 #include <cmath>
 #include <iterator>
 #include <random>
-#include <map>
 
 using namespace std;
 
@@ -21,16 +20,6 @@ namespace std { // hash function for custom Node unordered map
         }
     };
 }
-
-struct PositionComparator {
-    bool operator()(const Position& a, const Position& b) const {
-        if (a.row == b.row) {
-            return a.column < b.column;
-        }
-        return a.row < b.row;
-    }
-};
-
 
 //random Iterator for generating random functions
 template<typename Iter, typename RandomGenerator> 

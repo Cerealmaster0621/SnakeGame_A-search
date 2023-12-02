@@ -3,7 +3,7 @@
 
 using namespace std;
 
-struct Position_override {
+struct Position_overload {
     bool operator()(const Position& a, const Position& b) const {
         if (a.row == b.row) {
             return a.column < b.column;
@@ -35,8 +35,8 @@ vector<Position> get_neighbors(const Position& a,const Board& board){ //get neig
 */
 vector<Position> bfs(const Position& start, const Position& goal, const Board& board){
     queue<Position> q;
-    map<Position,bool, Position_override> visited{};
-    map<Position, Position,Position_override> previous{};
+    map<Position,bool, Position_overload> visited{};
+    map<Position, Position,Position_overload> previous{};
 
     q.push(start);
     visited[start] = true;
@@ -76,8 +76,8 @@ vector<Position> bfs(const Position& start, const Position& goal, const Board& b
 
 vector<Position> survival_mode(const Position& start, const Board& board) {
     queue<Position> q;
-    map<Position, int, Position_override> distance;//records distance between start-current possition
-    map<Position, Position, Position_override> previous;
+    map<Position, int, Position_overload> distance;//records distance between start-current possition
+    map<Position, Position, Position_overload> previous;
 
     q.push(start);
     distance[start] = 0;
@@ -134,11 +134,22 @@ int direction(const Board& board, const Position& next_position){
 int choose_next_move(const Board& board) {
     vector<Position> path = bfs(board.get_head(), board.apple, board);
     int result;
-    if (path[0] != Position{-1, -1}){
+    vector<Position> neighbors = get_neighbors(board.apple,board);
+    bool head = false;
+    for(auto& i : neighbors){
+        if(i == board.get_head())
+            head = true;
+    }
+    if (neighbors.size()<2 && head==true){ //dead end logic?
+        path = survival_mode(board.get_head(),board);
         result = direction(board,path[1]);
         return result;
     }
-    else{
+    if (path[0] != Position{-1, -1}){ //when target is not blocked by it's body
+        result = direction(board,path[1]);
+        return result;
+    }
+    else{//when target is blocked by it's body - buy some time
         path = survival_mode(board.get_head(),board);
         result = direction(board,path[1]);
         return result;
