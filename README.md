@@ -15,9 +15,9 @@ This project implements the A* pathfinding and BFS algorithm in a classic snake 
 ### Installation
 
 ```
-$ git clone https://github.com/Cerealmaster0621/SnakeGame_A-search.git
-$ ./snake.py run template.cpp`
-
+git clone https://github.com/Cerealmaster0621/SnakeGame_A-search.git
+cd SnakeGame_A-search/
+./snake.py run snake_bfs.cpp
 ```
 or...
 ```
