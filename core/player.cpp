@@ -1,16 +1,55 @@
-#include<bits/stdc++.h>
 #include "player.h"
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <unordered_map>
+#include <functional>
+#include <algorithm>
+#include <cmath>
+#include <iterator>
+#include <random>
 
 using namespace std;
 
-struct Position_override {
-    bool operator()(const Position& a, const Position& b) const {
-        if (a.row == b.row) {
-            return a.column < b.column;
+namespace std { // hash function for custom Node unordered map
+    template <>
+    struct hash<Position> {
+        size_t operator()(const Position& position) const {
+            return hash<int>()(position.row) ^ hash<int>()(position.column);
         }
-        return a.row < b.row;
+    };
+}
+
+//random Iterator for generating random functions
+template<typename Iter, typename RandomGenerator> 
+Iter select_randomly(Iter start, Iter end, RandomGenerator& g) {
+    uniform_int_distribution<> dis(0, distance(start, end) - 1);
+    advance(start, dis(g));
+    return start;
+}
+
+template<typename Iter>
+Iter select_randomly(Iter start, Iter end) {
+    static random_device rd;
+    static mt19937 gen(rd());
+    return select_randomly(start, end, gen);
+}
+
+struct Node {
+    Position position;
+    int cost;
+    int heuristic;
+    Node* parent;
+    //f(x) = g(x)+h(x)
+    int total_cost() const{
+        return cost+heuristic;
     }
 };
+
+//heuristic(Manhattan)
+int heuristic(const Position& a, const Position& b) {
+    return distance(a,b);
+}
 
 vector<Position> get_neighbors(const Position& a,const Board& board){ //get neighbored Node and store it in result
     vector<Position> result = {};
@@ -28,95 +67,46 @@ vector<Position> get_neighbors(const Position& a,const Board& board){ //get neig
     return result;
 }
 
-//BFS search
-/* q
-*  visited_paths <-> instead of Node struct, make previous list for recording it's connection this time
-*  results_paths
-*/
-vector<Position> bfs(const Position& start, const Position& goal, const Board& board){
-    queue<Position> q;
-    map<Position,bool, Position_override> visited{};
-    map<Position, Position,Position_override> previous{};
+//return full paths to goal(0 is next position, last is goal)
+vector<Position> a_star(const Position& start, const Position& goal, const Board& board){
+    auto compare = [](const Node& a, const Node& b) { return a.total_cost() > b.total_cost(); }; //compare two nodes
+    priority_queue<Node, vector<Node>, decltype(compare)> open_set(compare); // this sets contains Nodes that needs to be treated, lowest cost comes on top
+    unordered_map<Position, Node> all_nodes; //contains every Nodes that has or needs to be searched
 
-    q.push(start);
-    visited[start] = true;
-    
-    //looping phase
-    while(!q.empty()){
-        Position current = q.front();
-        q.pop();
-        vector<Position> neighbors = get_neighbors(current, board);
-        for(auto& neighbor : neighbors){
-            if (visited[neighbor] == false){
-                q.push(neighbor);
-                visited[neighbor] = true;
-                previous[neighbor] = current;
+    open_set.push({start, 0, heuristic(start, goal),nullptr});//open_set initial value(can't be empty unless search has done)  
+    all_nodes[start] = {start, 0, heuristic(start, goal),nullptr};//all_nodes initial value
+
+    while (!open_set.empty()){
+        Node current = open_set.top();//current Node = top of the open_set queue that has lowest total_cost
+        open_set.pop(); // delete the current node from open_set since we don't need to iterate again
+
+        if (current.position == goal){ //when path search finished, go back to the parents Node(nullptr) and save every
+        //Nodes in path vector. return REVERSED order of path since path[0] should be current position and last index to goal.
+            vector<Position> path = {};
+            while(!(current.parent == nullptr)){
+                path.push_back(current.position);
+                current = *current.parent; 
+            }
+            reverse(path.begin(),path.end());
+            return path;
+        }
+
+        for(const auto& neighbor : get_neighbors(current.position, board)){
+            if(!board.is_valid_position(neighbor)) continue; //if the given neighbor is not valid, continue
+            //!!!make node before adding in the unordered_map or priority queue. cause infinite loop for same adrees on Parent Node!!!
+            Node neighbor_node = {neighbor, current.cost + 1, heuristic(neighbor,goal),&all_nodes[current.position]};
+            bool is_new_node = all_nodes.find(neighbor) == all_nodes.end();//check if it's not already in all_nodes map
+            bool is_closer_to_goal = is_new_node || (current.cost+1) < all_nodes[neighbor].cost;//check new route is closer to goal
+            if(is_closer_to_goal){ //if New Node is not in all_nodes or have better costs
+                all_nodes[neighbor] = neighbor_node;//apppend new Nodes
+                open_set.push(neighbor_node); //append new open_set
             }
         }
     }
-    //pathfinding phase
-    vector<Position> results;
-    Position parent_node = goal;
-    results.push_back(parent_node);
-    bool flag = true;
-    while(flag){
-        if(previous.find(parent_node) == previous.end()){
-            return {{-1, -1}};
-        }
-        parent_node = previous[parent_node];
-        if (parent_node == start){
-            results.push_back(parent_node);
-            reverse(results.begin(),results.end());
-            return results;
-        }
-        results.push_back(parent_node);
-    }
-    return {{-1,-1}};
+    return {{-1,-1}}; //return empty path if no possible path found
 }
 
-vector<Position> survival_mode(const Position& start, const Board& board) {
-    queue<Position> q;
-    map<Position, int, Position_override> distance;//records distance between start-current possition
-    map<Position, Position, Position_override> previous;
-
-    q.push(start);
-    distance[start] = 0;
-    Position farthest_position = start;//records furthest position from start <=> keep updating end in bfs
-    //looping phase
-    while (!q.empty()) {
-        Position current = q.front();
-        q.pop();
-        vector<Position> neighbors = get_neighbors(current, board);
-        //looping phase (records distance)
-        for (auto& neighbor : neighbors) {
-            if (distance.find(neighbor) == distance.end()) {
-                q.push(neighbor);
-                distance[neighbor] = distance[current] + 1;
-                previous[neighbor] = current;
-                if (distance[neighbor] > distance[farthest_position]) {
-                    farthest_position = neighbor;
-                }
-            }
-        }
-    }
-    //pathfinding phase
-    vector<Position> path;
-    bool flag = 1;
-    while(flag) {
-        Position parent_node = farthest_position;
-        while (parent_node != start) {
-            path.push_back(parent_node);
-            parent_node = previous[parent_node];
-        }
-        path.push_back(start);
-        reverse(path.begin(), path.end());
-        return path;
-    }
-    return {{-1,-1}};
-}
-
-
-
+//based on vector<Position> from a_star, decide next move
 int direction(const Board& board, const Position& next_position){
     cout<<"Score : "<<board.snake.size()-1<<", next row : "<<next_position.row<<", next column : "<<next_position.column<<endl;
     if (next_position.column > board.get_head().column) {
@@ -128,31 +118,25 @@ int direction(const Board& board, const Position& next_position){
     } else if (next_position.row < board.get_head().row) {
         return 1; //when targetted row is smaller than current row -> move up
     }
-    return 1;
+    return -1;
 }
 
 int choose_next_move(const Board& board) {
-    vector<Position> path = bfs(board.get_head(), board.apple, board);
-    int result;
-    vector<Position> neighbors = get_neighbors(board.apple,board);
-    bool head = false;
-    for(auto& i : neighbors){
-        if(i == board.get_head())
-            head = true;
-    }
-    if (neighbors.size()<2 && head==true){ //if target is surrounded by 3
-        path = survival_mode(board.get_head(),board);
-        result = direction(board,path[1]);
-        return result;
-    }
-    if (path[0] != Position{-1, -1}){
-        result = direction(board,path[1]);
-        return result;
-    }
+    // a_search first
+    vector<Position> search_result = a_star(board.get_head(), board.apple, board);
+    if (search_result[0] != Position{-1, -1}) return direction(board, search_result[0]);
+    // If that fails, try moving towards the tail
     else{
-        path = survival_mode(board.get_head(),board);
-        result = direction(board,path[1]);
-        return result;
+        cout<<"Following tail"<<endl;
+        Position tail = board.snake[board.snake.size() - 1];
+        search_result = a_star(board.get_head(), tail, board);
+        if (search_result[0] != Position{-1, -1}) return direction(board, search_result[0]);
+    }
+    // If all else fails, choose a random move
+    vector<Position> possible_paths = get_neighbors(board.get_head(), board);
+    if (!possible_paths.empty()) {
+        Position result = *select_randomly(possible_paths.begin(), possible_paths.end());
+        return direction(board, result);
     }
     return 1;
 }
